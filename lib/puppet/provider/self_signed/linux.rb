@@ -1,5 +1,6 @@
 require 'openssl'
 Puppet::Type.type(:self_signed).provide(:linux ) do
+  desc 'provider to generate self signed certificates on linux'
   
   defaultfor :kernel => 'Linux'
   mk_resource_methods

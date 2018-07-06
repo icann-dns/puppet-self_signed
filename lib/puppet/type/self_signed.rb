@@ -9,19 +9,19 @@ Puppet::Type.newtype(:self_signed) do
     when false, 'false', :false
       :false
     else
-      fail("munge_boolean only takes booleans")
+      raise('munge_boolean only takes booleans')
     end
   end
 
-  newparam(:cn, :namevar => true) do
+  newparam(:cn, namevar: true) do
     desc 'the certificate cn'
-    newvalues(/[\w\-\.]+/)
+    newvalues(%r{[\w\-\.]+})
   end
 
-  newproperty(:bits ) do
+  newproperty(:bits) do
     desc 'the number of bits'
     defaultto(2048)
-    newvalues(/\d+/)
+    newvalues(%r{\d+})
   end
 
   newproperty(:email) do
@@ -50,14 +50,14 @@ Puppet::Type.newtype(:self_signed) do
 
   newproperty(:days) do
     desc 'The number of days for the certificate'
-    defaultto(3650)  
+    defaultto(3650)
     munge do |value|
       value.to_i
     end
-    newvalues(/\d+/)
+    newvalues(%r{\d+})
   end
 
-  newparam(:update, :boolean => true) do
+  newparam(:update, boolean: true) do
     desc 'Should we update the certificate when its due to expire'
     munge do |value|
       @resource.munge_boolean(value)
@@ -67,8 +67,7 @@ Puppet::Type.newtype(:self_signed) do
 
   newparam(:update_days) do
     desc 'The number of days before expiry we should update the cert'
-    defaultto(10)  
-    newvalues(/\d+/)
+    defaultto(10)
+    newvalues(%r{\d+})
   end
-
 end

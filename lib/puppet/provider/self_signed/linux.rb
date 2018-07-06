@@ -1,41 +1,43 @@
 require 'openssl'
-Puppet::Type.type(:self_signed).provide(:linux ) do
+Puppet::Type.type(:self_signed).provide(:linux) do
   desc 'provider to generate self signed certificates on linux'
-  
-  defaultfor :kernel => 'Linux'
+
+  defaultfor kernel: 'Linux'
   mk_resource_methods
-  def initialize(value={})
+  def initialize(value = {})
     super(value)
     @property_flush = {}
   end
 
   def self.prefetch(resources)
     instances.each do |prov|
+      # rubocop:disable Lint/AssignmentInCondition
       if resource = resources[prov.name]
+        # rubocop:enable Lint/AssignmentInCondition
         resource.provider = prov
       end
     end
   end
 
   def self.instances
-    results     = Array.new
+    results     = []
     prefix      = '/etc/ssl/certs'
-    subject_map = { 'CN' => :name, 'OU' => :unit, 'O' => :organisation, 'L' => :locality, 'ST' => :state, 'C' => :country} 
+    subject_map = { 'CN' => :name, 'OU' => :unit, 'O' => :organisation, 'L' => :locality, 'ST' => :state, 'C' => :country }
 
-    if File.exist?(prefix) then
+    if File.exist?(prefix)
       Dir.foreach('/etc/ssl/certs') do |cert_file|
-        if cert_file.start_with?('puppet_self_signed_') then
+        if cert_file.start_with?('puppet_self_signed_')
           raw = File.read(prefix + '/' + cert_file)
           cert = OpenSSL::X509::Certificate.new(raw)
           Puppet.debug("Collecting #{cert_file}")
-          result = { :ensure => :present }
+          result = { ensure: :present }
           cert.subject.to_a.each do |subject_entry|
             Puppet.debug("Collecting #{subject_entry[0]} = #{subject_entry[1]}")
             result[subject_map[subject_entry[0]]] = subject_entry[1]
           end
           result[:bits] = cert.public_key.n.num_bytes * 8
-          result[:days] = ((cert.not_after - cert.not_before)/24/60/60).to_i
-          if cert.not_after < Time.now + 465 * 24 * 60 * 60 then
+          result[:days] = ((cert.not_after - cert.not_before) / 24 / 60 / 60).to_i
+          if cert.not_after < Time.now + 465 * 24 * 60 * 60
             Puppet.debug("cert expiring #{cert.subject}: #{cert.not_after}")
           end
           results << new(result)
@@ -51,7 +53,6 @@ Puppet::Type.type(:self_signed).provide(:linux ) do
     cert_file = base_path + '/certs/' + prefix + @resource[:name] + '.pem'
     key_file  = base_path + '/private/' + prefix + @resource[:name] + '.key'
     key       = nil
-    cert      = nil
 
     subject   = "/CN=#{@resource[:name]}"
     subject   = "#{subject}/emailAddress/#{@resource[:email]}" if @resource[:email]
@@ -63,15 +64,15 @@ Puppet::Type.type(:self_signed).provide(:linux ) do
 
     Puppet.debug("Flushing #{subject}")
 
-    ['','/certs', '/private'].each do |subdir| 
-      if ! File.exists?(base_path + subdir) then
+    ['', '/certs', '/private'].each do |subdir|
+      unless File.exist?(base_path + subdir)
         Dir.mkdir(base_path + subdir)
       end
     end
-    if File.exists?(key_file) then
-      raw = File.read(key_file) 
+    if File.exist?(key_file)
+      raw = File.read(key_file)
       key = OpenSSL::PKey::RSA.new(raw)
-    else 
+    else
       key = OpenSSL::PKey::RSA.new(@resource[:bits])
       File.write(key_file, key.to_pem)
     end
@@ -88,12 +89,12 @@ Puppet::Type.type(:self_signed).provide(:linux ) do
     ef.subject_certificate = cert
     ef.issuer_certificate  = cert
     cert.extensions = [
-      ef.create_extension("basicConstraints","CA:TRUE", true),
-      ef.create_extension("subjectKeyIdentifier", "hash"),
+      ef.create_extension('basicConstraints', 'CA:TRUE', true),
+      ef.create_extension('subjectKeyIdentifier', 'hash'),
     ]
-    cert.add_extension ef.create_extension("authorityKeyIdentifier",
-                                          "keyid:always,issuer:always")
-    
+    cert.add_extension ef.create_extension('authorityKeyIdentifier',
+                                           'keyid:always,issuer:always')
+
     cert.sign(key, OpenSSL::Digest::SHA1.new)
     File.write(cert_file, cert.to_pem)
   end

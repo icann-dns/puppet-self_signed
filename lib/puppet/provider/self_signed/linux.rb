@@ -95,7 +95,7 @@ Puppet::Type.type(:self_signed).provide(:linux) do
     cert.add_extension ef.create_extension('authorityKeyIdentifier',
                                            'keyid:always,issuer:always')
 
-    cert.sign(key, OpenSSL::Digest::SHA1.new)
+    cert.sign(key, OpenSSL::Digest::SHA256.new)
     File.write(cert_file, cert.to_pem)
   end
 
